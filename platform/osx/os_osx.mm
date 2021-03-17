@@ -2541,6 +2541,11 @@ Size2 OS_OSX::get_screen_size(int p_screen) const {
 	return Size2();
 }
 
+float OS_OSX::get_screen_refresh_rate(int p_screen) const {
+    //Can't get refresh rate on Mac using AppKit, default to 60.
+    return 60.0;
+}
+
 void OS_OSX::_update_window() {
 	bool borderless_full = false;
 

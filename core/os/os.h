@@ -208,7 +208,8 @@ public:
 	virtual int get_current_screen() const { return 0; }
 	virtual void set_current_screen(int p_screen) {}
 	virtual Point2 get_screen_position(int p_screen = -1) const { return Point2(); }
-	virtual Size2 get_screen_size(int p_screen = -1) const { return get_window_size(); }
+    virtual Size2 get_screen_size(int p_screen = -1) const { return get_window_size(); }
+    virtual float get_screen_refresh_rate(int p_screen = -1) const { return 60.0; }
 	virtual int get_screen_dpi(int p_screen = -1) const { return 72; }
 	virtual float get_screen_scale(int p_screen = -1) const { return 1.0; }
 	virtual float get_screen_max_scale() const { return 1.0; };

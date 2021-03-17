@@ -2053,6 +2053,13 @@ Size2 OS_Windows::get_screen_size(int p_screen) const {
 	return data.size;
 }
 
+float OS_Windows::get_screen_refresh_rate(int p_screen) const {
+    DEVMODE data;
+    memset(&data, 0, sizeof(data));
+    EnumDisplaySettingsA(NULL, ENUM_CURRENT_SETTINGS, &data);
+    return data.dmDisplayFrequency;
+}
+
 typedef struct {
 	int count;
 	int screen;

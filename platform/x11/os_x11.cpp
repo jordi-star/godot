@@ -1240,6 +1240,26 @@ Size2 OS_X11::get_screen_size(int p_screen) const {
 	return size;
 }
 
+float OS_X11::get_screen_refresh_rate(int p_screen) const {
+    if (p_screen == -1) {
+        p_screen = get_current_screen();
+    }
+
+    //invalid screen?
+    ERR_FAIL_INDEX_V(p_screen, get_screen_count(), 0);
+
+    float refresh_rate = 60.0; //Default to 60 hz if the engine was unable to get the refresh rate.
+
+    if (xrandr_ext_ok) {
+        int count = 0;
+        if (xrr_get_monitors) {
+            XRRScreenConfiguration *conf = XRRGetScreenInfo(x11_display, x11_window);
+            refresh_rate = XRRConfigCurrentRate(conf);
+        }
+    }
+    return refresh_rate;
+}
+
 int OS_X11::get_screen_dpi(int p_screen) const {
 	if (p_screen == -1) {
 		p_screen = get_current_screen();
