@@ -1052,6 +1052,30 @@ int DisplayServerX11::screen_get_dpi(int p_screen) const {
 	return 96;
 }
 
+float DisplayServerX11::screen_get_refresh_rate(int p_screen) const {
+	_THREAD_SAFE_METHOD_
+
+	if (p_screen == SCREEN_OF_MAIN_WINDOW) {
+		p_screen = window_get_current_screen();
+	}
+
+	//invalid screen?
+	ERR_FAIL_INDEX_V(p_screen, get_screen_count(), SCREEN_REFRESH_RATE_FALLBACK);
+
+	//Use xrandr to get screen refresh rate.
+	if (xrandr_ext_ok) {
+		XRRScreenConfiguration *config = XRRGetScreenInfo(x11_display, RootWindow(x11_display, 0));
+		if (config) {
+			return (float)XRRConfigCurrentRate(config);
+		} else {
+			ERR_PRINT("An error occured while trying to get the screen refresh rate.");
+			return SCREEN_REFRESH_RATE_FALLBACK;
+		}
+	}
+	ERR_PRINT("An error occured while trying to get the screen refresh rate.");
+	return SCREEN_REFRESH_RATE_FALLBACK;
+}
+
 bool DisplayServerX11::screen_is_touchscreen(int p_screen) const {
 	_THREAD_SAFE_METHOD_
 
