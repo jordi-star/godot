@@ -39,6 +39,7 @@
 #include "editor_node.h"
 #include "editor_scale.h"
 #include "editor_settings.h"
+#include "modules/gdscript/gdscript.h"
 
 #define CONTRIBUTE_URL vformat("%s/community/contributing/updating_the_class_reference.html", VERSION_DOCS_URL)
 
@@ -1484,6 +1485,10 @@ static void _add_text_to_rt(const String &p_bbcode, RichTextLabel *p_rt) {
 	Color code_color = p_rt->get_theme_color(SNAME("code_color"), SNAME("EditorHelp"));
 	Color kbd_color = p_rt->get_theme_color(SNAME("kbd_color"), SNAME("EditorHelp"));
 
+	Ref<EditorSyntaxHighlighter> code_highlighter;
+	code_highlighter.instantiate();
+
+
 	String bbcode = p_bbcode.dedent().replace("\t", "").replace("\r", "").strip_edges();
 
 	// Select the correct code examples
@@ -1556,8 +1561,25 @@ static void _add_text_to_rt(const String &p_bbcode, RichTextLabel *p_rt) {
 			String text = bbcode.substr(pos, brk_pos - pos);
 			if (!code_tag) {
 				text = text.replace("\n", "\n\n");
+				p_rt->add_text(text);
 			}
-			p_rt->add_text(text);
+			else {
+				if((int)EDITOR_GET("text_editor/help/class_reference_examples") == 0) { // Doc Syntax Highlighting only implemented for GDScript at the moment.
+					PackedStringArray code_lines = text.split("\n");
+					Ref<GDScript> code_as_script = memnew(GDScript);
+					code_as_script->set_source_code(text);
+					if(code_as_script->reload(false) == OK) {
+						code_highlighter->set_script(code_as_script);
+						for (int i = 0; i < code_lines.size(); i++) {
+							Dictionary highlight_info = code_highlighter->get_line_syntax_highlighting(i);
+							print_line(highlight_info);
+						}
+					}
+				}
+				else {
+					p_rt->add_text(text);
+				}
+			}
 		}
 
 		if (brk_pos == bbcode.length()) {
