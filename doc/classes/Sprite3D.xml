@@ -8,6 +8,15 @@
 	</description>
 	<tutorials>
 	</tutorials>
+	<methods>
+ 		<method name="get_texture_from_region" qualifiers="const">
+ 			<return type="ImageTexture" />
+			 <argument index="0" name="override_region" type="Rect2" />
+ 			<description>
+ 				Returns an [ImageTexture] of [member texture] cropped by [member region_rect].
+ 			</description>
+ 		</method>
+	</methods>
 	<members>
 		<member name="frame" type="int" setter="set_frame" getter="get_frame" default="0">
 			Current frame to display from sprite sheet. [member hframes] or [member vframes] must be greater than 1.

@@ -1060,6 +1060,12 @@ int AtlasTexture::get_height() const {
 	}
 }
 
+Ref<ImageTexture> AtlasTexture::get_texture_from_region() const {
+	Ref<ImageTexture> new_texture = memnew(ImageTexture);
+	new_texture->create_from_image(atlas->get_image()->get_rect(region));
+	return new_texture;
+}
+
 RID AtlasTexture::get_rid() const {
 	if (atlas.is_valid()) {
 		return atlas->get_rid();
@@ -1125,6 +1131,7 @@ bool AtlasTexture::has_filter_clip() const {
 void AtlasTexture::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_atlas", "atlas"), &AtlasTexture::set_atlas);
 	ClassDB::bind_method(D_METHOD("get_atlas"), &AtlasTexture::get_atlas);
+	ClassDB::bind_method(D_METHOD("get_texture_from_region"), &AtlasTexture::get_texture_from_region);
 
 	ClassDB::bind_method(D_METHOD("set_region", "region"), &AtlasTexture::set_region);
 	ClassDB::bind_method(D_METHOD("get_region"), &AtlasTexture::get_region);

@@ -39,6 +39,13 @@
 				[/codeblocks]
 			</description>
 		</method>
+ 		<method name="get_texture_from_region" qualifiers="const">
+ 			<return type="ImageTexture" />
+			 <argument index="0" name="override_region" type="Rect2" />
+ 			<description>
+ 				Returns an [ImageTexture] of [member texture] cropped by [member region_rect].
+ 			</description>
+ 		</method>
 		<method name="is_pixel_opaque" qualifiers="const">
 			<return type="bool" />
 			<argument index="0" name="pos" type="Vector2" />

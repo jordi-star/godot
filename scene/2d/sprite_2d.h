@@ -84,6 +84,7 @@ public:
 
 	void set_texture(const Ref<Texture2D> &p_texture);
 	Ref<Texture2D> get_texture() const;
+	Ref<ImageTexture> get_texture_from_region(Rect2 override_region = Rect2()) const;
 
 	void set_centered(bool p_center);
 	bool is_centered() const;

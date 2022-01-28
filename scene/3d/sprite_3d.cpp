@@ -618,6 +618,25 @@ Ref<Texture2D> Sprite3D::get_texture() const {
 	return texture;
 }
 
+Ref<ImageTexture> Sprite3D::get_texture_from_region(Rect2 override_region) const {
+	if (override_region == Rect2()) {
+		// No override specified.
+		// Check if region enabled.
+		if (region) {
+			override_region = region_rect; // Set override_region to region_rect so we can use only one variable later. Prevent writing duplicate code for both.
+		}
+		else {
+			// If no region specified at all, return full image.
+			Ref<ImageTexture> new_texture = memnew(ImageTexture);
+			new_texture->create_from_image(texture->get_image());
+			return new_texture;
+		}
+	}
+	Ref<ImageTexture> new_texture = memnew(ImageTexture);
+	new_texture->create_from_image(texture->get_image()->get_rect(override_region));
+	return new_texture;
+}
+
 void Sprite3D::set_region_enabled(bool p_region) {
 	if (p_region == region) {
 		return;

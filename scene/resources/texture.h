@@ -233,6 +233,7 @@ public:
 
 	void set_atlas(const Ref<Texture2D> &p_atlas);
 	Ref<Texture2D> get_atlas() const;
+	Ref<ImageTexture> get_texture_from_region() const;
 
 	void set_region(const Rect2 &p_region);
 	Rect2 get_region() const;
