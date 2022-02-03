@@ -1066,7 +1066,7 @@ float DisplayServerX11::screen_get_refresh_rate(int p_screen) const {
 	if (xrandr_ext_ok) {
 		XRRScreenConfiguration *config = XRRGetScreenInfo(x11_display, RootWindow(x11_display, 0));
 		if (config) {
-			return (float)XRRConfigCurrentRate(config);
+			return (float)XRRConfigRates(config, p_screen, get_screen_count());
 		} else {
 			ERR_PRINT("An error occured while trying to get the screen refresh rate.");
 			return SCREEN_REFRESH_RATE_FALLBACK;
