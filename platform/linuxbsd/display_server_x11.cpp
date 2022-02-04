@@ -1080,8 +1080,8 @@ float DisplayServerX11::screen_get_refresh_rate(int p_screen) const {
 			}
 
 			bool found_active_mode = false;
-			for (int crtc = 0; crtc < screen_info.ncrtc;crtc++) { // Loop through outputs to find which one is currently outputting.
-				XRRCrtInfo *monitor_info = XRRGetCrtcInfo(x11_display, screen_info, screen_info->crtcs[crtc]);
+			for (int crtc = 0; crtc < screen_info->ncrtc;crtc++) { // Loop through outputs to find which one is currently outputting.
+				XRRCrtcInfo *monitor_info = XRRGetCrtcInfo(x11_display, screen_info, screen_info->crtcs[crtc]);
 				if (monitor_info->x != monitors[p_screen].x || monitor_info->y != monitors[p_screen].y) { // If X and Y aren't the same as the monitor we're looking for, this isn't the right monitor. Continue.
 					continue;
 				}
@@ -1094,7 +1094,7 @@ float DisplayServerX11::screen_get_refresh_rate(int p_screen) const {
 			}
 
 			if (found_active_mode) {
-				for (int mode = 0; mode < screen_info.nmodes; mode++) {
+				for (int mode = 0; mode < screen_info->nmodes; mode++) {
 					XRRModeInfo m_info = screen_info->modes[mode];
 					if (m_info.id == current_mode) {
 						return (float) m_info.dotClock / ((float)m_info.hTotal * (float)m_info.vTotal);
