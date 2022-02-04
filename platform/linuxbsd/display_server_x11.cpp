@@ -1094,7 +1094,7 @@ float DisplayServerX11::screen_get_refresh_rate(int p_screen) const {
 			}
 
 			if (found_active_mode) {
-				for (int mode = 0; mode < screen_info->nmodes; mode++) {
+				for (int mode = 0; mode < screen_info->nmode; mode++) {
 					XRRModeInfo m_info = screen_info->modes[mode];
 					if (m_info.id == current_mode) {
 						return (float) m_info.dotClock / ((float)m_info.hTotal * (float)m_info.vTotal);
