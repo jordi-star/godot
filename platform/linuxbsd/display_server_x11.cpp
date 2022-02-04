@@ -1073,14 +1073,13 @@ float DisplayServerX11::screen_get_refresh_rate(int p_screen) const {
 				int count = 0;
 				monitors = xrr_get_monitors(x11_display, windows[MAIN_WINDOW_ID].x11_window, true, &count);
 				ERR_FAIL_INDEX_V(p_screen, count, SCREEN_REFRESH_RATE_FALLBACK);
-			}
-			else {
+			} else {
 				ERR_PRINT("An error occured while trying to get the screen refresh rate.");
 				return SCREEN_REFRESH_RATE_FALLBACK;
 			}
 
 			bool found_active_mode = false;
-			for (int crtc = 0; crtc < screen_info->ncrtc;crtc++) { // Loop through outputs to find which one is currently outputting.
+			for (int crtc = 0; crtc < screen_info->ncrtc; crtc++) { // Loop through outputs to find which one is currently outputting.
 				XRRCrtcInfo *monitor_info = XRRGetCrtcInfo(x11_display, screen_info, screen_info->crtcs[crtc]);
 				if (monitor_info->x != monitors[p_screen].x || monitor_info->y != monitors[p_screen].y) { // If X and Y aren't the same as the monitor we're looking for, this isn't the right monitor. Continue.
 					continue;
