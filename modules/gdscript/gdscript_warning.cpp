@@ -155,6 +155,14 @@ String GDScriptWarning::get_message() const {
 		case INT_ASSIGNED_TO_ENUM: {
 			return "Integer used when an enum value is expected. If this is intended cast the integer to the enum type.";
 		}
+		case ENFORCE_STATIC_VARIABLE_TYPES: {
+			CHECK_SYMBOLS(2);
+			return vformat(R"(%s '%s' does not have a static type defined (Enforce Static Variable Types enabled in Project Settings).)", symbols[0], symbols[1]);
+		}
+		case ENFORCE_STATIC_METHOD_PARAMETER_TYPES: {
+			CHECK_SYMBOLS(2);
+			return vformat(R"(%s '%s' does not have a static type defined (Enforce Static Method Parameter Types enabled in Project Settings).)", symbols[0], symbols[1]);
+		}
 		case WARNING_MAX:
 			break; // Can't happen, but silences warning
 	}
@@ -164,10 +172,17 @@ String GDScriptWarning::get_message() const {
 }
 
 int GDScriptWarning::get_default_value(Code p_code) {
-	if (get_name_from_code(p_code).to_lower().begins_with("unsafe_")) {
-		return WarnLevel::IGNORE;
+	switch (p_code) {
+		case ENFORCE_STATIC_VARIABLE_TYPES:
+		case ENFORCE_STATIC_METHOD_PARAMETER_TYPES:
+			return WarnLevel::IGNORE;
+
+		default:
+			if (get_name_from_code(p_code).to_lower().begins_with("unsafe_")) {
+				return WarnLevel::IGNORE;
+			}
+			return WarnLevel::WARN;
 	}
-	return WarnLevel::WARN;
 }
 
 PropertyInfo GDScriptWarning::get_property_info(Code p_code) {
@@ -215,6 +230,8 @@ String GDScriptWarning::get_name_from_code(Code p_code) {
 		"EMPTY_FILE",
 		"SHADOWED_GLOBAL_IDENTIFIER",
 		"INT_ASSIGNED_TO_ENUM",
+		"ENFORCE_STATIC_VARIABLE_TYPES",
+		"ENFORCE_STATIC_METHOD_PARAMETER_TYPES"
 	};
 
 	static_assert((sizeof(names) / sizeof(*names)) == WARNING_MAX, "Amount of warning types don't match the amount of warning names.");
@@ -223,7 +240,14 @@ String GDScriptWarning::get_name_from_code(Code p_code) {
 }
 
 String GDScriptWarning::get_settings_path_from_code(Code p_code) {
-	return "debug/gdscript/warnings/" + get_name_from_code(p_code).to_lower();
+	switch (p_code) {
+		case ENFORCE_STATIC_VARIABLE_TYPES:
+		case ENFORCE_STATIC_METHOD_PARAMETER_TYPES:
+			return "debug/gdscript/type_inferencing/" + get_name_from_code(p_code).to_lower();
+
+		default:
+			return "debug/gdscript/warnings/" + get_name_from_code(p_code).to_lower();
+	}
 }
 
 GDScriptWarning::Code GDScriptWarning::get_code_from_name(const String &p_name) {

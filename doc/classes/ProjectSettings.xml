@@ -334,6 +334,12 @@
 		<member name="debug/file_logging/max_log_files" type="int" setter="" getter="" default="5">
 			Specifies the maximum amount of log files allowed (used for rotation).
 		</member>
+		<member name="debug/gdscript/type_inferencing/enforce_static_method_parameter_types" type="int" setter="" getter="" default="0">
+			If [code]enabled[/code], prints a warning or an error when a method parameter uses [url=https://en.wikipedia.org/wiki/Type_inference]type inferencing[/url].
+		</member>
+		<member name="debug/gdscript/type_inferencing/enforce_static_variable_types" type="int" setter="" getter="" default="0">
+			If [code]enabled[/code], prints a warning or an error when a variable uses [url=https://en.wikipedia.org/wiki/Type_inference]type inferencing[/url].
+		</member>
 		<member name="debug/gdscript/warnings/assert_always_false" type="int" setter="" getter="" default="1">
 			If [code]enabled[/code], prints a warning or an error when an [code]assert[/code] call always returns false.
 		</member>
@@ -374,7 +380,7 @@
 			If [code]enabled[/code], prints a warning or an error when using a property as if it was a function.
 		</member>
 		<member name="debug/gdscript/warnings/redundant_await" type="int" setter="" getter="" default="1">
- 			If [code]enabled[/code], prints a warning or an error when a function that is not a coroutine is called with await.
+			If [code]enabled[/code], prints a warning or an error when a function that is not a coroutine is called with await.
 		</member>
 		<member name="debug/gdscript/warnings/return_value_discarded" type="int" setter="" getter="" default="1">
 			If [code]enabled[/code], prints a warning or an error when calling a function without using its return value (by assigning it to a variable or using it as a function argument). Such return values are sometimes used to denote possible errors using the [enum Error] enum.
@@ -1922,6 +1928,16 @@
 		<member name="rendering/vulkan/staging_buffer/max_size_mb" type="int" setter="" getter="" default="128">
 		</member>
 		<member name="rendering/vulkan/staging_buffer/texture_upload_region_size_px" type="int" setter="" getter="" default="64">
+		</member>
+		<member name="xr/openxr/default_action_map" type="String" setter="" getter="" default="&quot;res://default_action_map.tres&quot;">
+		</member>
+		<member name="xr/openxr/enabled" type="bool" setter="" getter="" default="false">
+		</member>
+		<member name="xr/openxr/form_factor" type="int" setter="" getter="" default="&quot;0&quot;">
+		</member>
+		<member name="xr/openxr/reference_space" type="int" setter="" getter="" default="&quot;1&quot;">
+		</member>
+		<member name="xr/openxr/view_configuration" type="int" setter="" getter="" default="&quot;1&quot;">
 		</member>
 		<member name="xr/shaders/enabled" type="bool" setter="" getter="" default="false">
 			If [code]true[/code], Godot will compile shaders required for XR.
