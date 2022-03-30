@@ -442,6 +442,7 @@ void ScriptTextEditor::_validate_script() {
 	_update_connected_methods();
 	_update_warnings();
 	_update_errors();
+	_update_highlighted_lines();
 
 	emit_signal(SNAME("name_changed"));
 	emit_signal(SNAME("edited_script_changed"));
@@ -449,6 +450,7 @@ void ScriptTextEditor::_validate_script() {
 
 void ScriptTextEditor::_update_warnings() {
 	int warning_nb = warnings.size();
+	int suggestion_nb = 0;
 	warnings_panel->clear();
 
 	bool has_connections_table = false;
@@ -475,8 +477,6 @@ void ScriptTextEditor::_update_warnings() {
 		}
 	}
 
-	code_editor->set_warning_count(warning_nb);
-
 	if (has_connections_table) {
 		warnings_panel->add_newline();
 	}
@@ -486,7 +486,7 @@ void ScriptTextEditor::_update_warnings() {
 	for (const ScriptLanguage::Warning &w : warnings) {
 		warnings_panel->push_cell();
 		warnings_panel->push_meta(w.start_line - 1);
-		warnings_panel->push_color(warnings_panel->get_theme_color(SNAME("warning_color"), SNAME("Editor")));
+		warnings_panel->push_color(w.is_suggestion ? warnings_panel->get_theme_color(SNAME("accent_color"), SNAME("Editor")) : warnings_panel->get_theme_color(SNAME("warning_color"), SNAME("Editor")));
 		warnings_panel->add_text(TTR("Line") + " " + itos(w.start_line));
 		warnings_panel->add_text(" (" + w.string_code + "):");
 		warnings_panel->pop(); // Color.
@@ -494,10 +494,16 @@ void ScriptTextEditor::_update_warnings() {
 		warnings_panel->pop(); // Cell.
 
 		warnings_panel->push_cell();
-		warnings_panel->add_text(w.message);
+		warnings_panel->add_text(w.is_suggestion ? "Suggestion: " + w.message : w.message);
 		warnings_panel->pop(); // Cell.
+		if (w.is_suggestion) {
+			suggestion_nb += 1;
+			warning_nb -= 1;
+		}
 	}
 	warnings_panel->pop(); // Table.
+
+	code_editor->set_warning_count(warning_nb, suggestion_nb);
 }
 
 void ScriptTextEditor::_update_errors() {
@@ -519,19 +525,34 @@ void ScriptTextEditor::_update_errors() {
 		errors_panel->pop(); // Cell.
 	}
 	errors_panel->pop(); // Table
+}
 
+
+void ScriptTextEditor::_update_highlighted_lines() {
 	CodeEdit *te = code_editor->get_text_editor();
 	bool highlight_safe = EDITOR_GET("text_editor/appearance/gutters/highlight_type_safe_lines");
 	bool last_is_safe = false;
 	for (int i = 0; i < te->get_line_count(); i++) {
-		if (errors.is_empty()) {
+		if (errors.is_empty() && warnings.is_empty()) {
 			te->set_line_background_color(i, Color(0, 0, 0, 0));
 		} else {
+			bool error_line = false;
 			for (const ScriptLanguage::ScriptError &E : errors) {
-				bool error_line = i == E.line - 1;
+				error_line = i == E.line - 1;
 				te->set_line_background_color(i, error_line ? marked_line_color : Color(0, 0, 0, 0));
 				if (error_line) {
 					break;
+				}
+			}
+			Color suggestion_line_color = warnings_panel->get_theme_color(SNAME("accent_color"), SNAME("Editor"));
+			suggestion_line_color.a = .1;
+			if (!error_line) {
+				for (const ScriptLanguage::Warning &W : warnings) {
+					bool suggestion_line = (i == W.start_line - 1) && W.is_suggestion;
+					te->set_line_background_color(i, suggestion_line ? suggestion_line_color : Color(0, 0, 0, 0));
+					if (suggestion_line) {
+						break;
+					}
 				}
 			}
 		}
@@ -1341,6 +1362,7 @@ void ScriptTextEditor::_notification(int p_what) {
 			if (is_visible_in_tree()) {
 				_update_warnings();
 				_update_errors();
+				_update_highlighted_lines();
 			}
 			[[fallthrough]];
 		case NOTIFICATION_ENTER_TREE: {

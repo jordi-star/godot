@@ -188,7 +188,7 @@ void GDScriptParser::push_warning(const Node *p_source, GDScriptWarning::Code p_
 	push_warning(p_source, p_code, symbols);
 }
 
-void GDScriptParser::push_warning(const Node *p_source, GDScriptWarning::Code p_code, const Vector<String> &p_symbols) {
+void GDScriptParser::push_warning(const Node *p_source, GDScriptWarning::Code p_code, const Vector<String> &p_symbols, bool is_suggestion) {
 	ERR_FAIL_COND(p_source == nullptr);
 	if (is_ignoring_warnings) {
 		return;
@@ -217,6 +217,7 @@ void GDScriptParser::push_warning(const Node *p_source, GDScriptWarning::Code p_
 	warning.end_line = p_source->end_line;
 	warning.leftmost_column = p_source->leftmost_column;
 	warning.rightmost_column = p_source->rightmost_column;
+	warning.is_suggestion = is_suggestion;
 
 	if (warn_level == GDScriptWarning::WarnLevel::ERROR) {
 		push_error(warning.get_message(), p_source);
@@ -1069,6 +1070,11 @@ GDScriptParser::ConstantNode *GDScriptParser::parse_constant() {
 
 	ConstantNode *constant = alloc_node<ConstantNode>();
 	constant->identifier = parse_identifier();
+
+	String constant_name = (String)constant->identifier->name;
+	if (constant_name != constant_name.to_upper()) {
+		push_warning(constant->identifier, GDScriptWarning::Code::CONSTANT_NAME_NOT_UPPERCASE, PackedStringArray(), true);
+	}
 
 	if (match(GDScriptTokenizer::Token::COLON)) {
 		if (check((GDScriptTokenizer::Token::EQUAL))) {

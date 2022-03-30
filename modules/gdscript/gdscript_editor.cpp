@@ -128,6 +128,7 @@ bool GDScriptLanguage::validate(const String &p_script, const String &p_path, Li
 			w.code = (int)warn.code;
 			w.string_code = GDScriptWarning::get_name_from_code(warn.code);
 			w.message = warn.get_message();
+			w.is_suggestion = warn.is_suggestion;
 			r_warnings->push_back(w);
 		}
 	}

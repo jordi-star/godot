@@ -163,6 +163,13 @@ String GDScriptWarning::get_message() const {
 			CHECK_SYMBOLS(2);
 			return vformat(R"(%s '%s' does not have a static type defined (Enforce Static Method Parameter Types enabled in Project Settings).)", symbols[0], symbols[1]);
 		}
+		case CONSTANT_NAME_NOT_UPPERCASE: {
+			return "Constant names should use MACRO_CASE for readability.";
+		}
+		case REDUNDANT_INFERRED_VAR_TYPE: {
+			CHECK_SYMBOLS(2);
+			return vformat(R"('%s' could be statically typed. This variable is assigned to a %s.)", symbols[0], symbols[1]);
+		}
 		case WARNING_MAX:
 			break; // Can't happen, but silences warning
 	}
@@ -232,6 +239,9 @@ String GDScriptWarning::get_name_from_code(Code p_code) {
 		"INT_ASSIGNED_TO_ENUM",
 		"ENFORCE_STATIC_VARIABLE_TYPES",
 		"ENFORCE_STATIC_METHOD_PARAMETER_TYPES"
+		"CONSTANT_NAME_NOT_UPPERCASE",
+		"REDUNDANT_INFERRED_VAR_TYPE",
+		"WARNING_MAX"
 	};
 
 	static_assert((sizeof(names) / sizeof(*names)) == WARNING_MAX, "Amount of warning types don't match the amount of warning names.");

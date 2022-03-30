@@ -159,6 +159,7 @@ protected:
 	void _validate_script(); // No longer virtual.
 	void _update_warnings();
 	void _update_errors();
+	void _update_highlighted_lines();
 	void _update_bookmark_list();
 	void _bookmark_item_pressed(int p_idx);
 

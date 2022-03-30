@@ -1710,10 +1710,17 @@ void CodeTextEditor::set_error_count(int p_error_count) {
 	}
 }
 
-void CodeTextEditor::set_warning_count(int p_warning_count) {
-	warning_button->set_text(itos(p_warning_count));
-	warning_button->set_visible(p_warning_count > 0);
-	if (!p_warning_count) {
+void CodeTextEditor::set_warning_count(int p_warning_count, int p_suggestion_count) {
+	warning_button->set_text(itos(p_warning_count+p_suggestion_count));
+	warning_button->set_visible(p_warning_count + p_suggestion_count > 0);
+	if (p_warning_count > 0) {
+		warning_button->set_icon(get_theme_icon(SNAME("NodeWarning"), SNAME("EditorIcons")));
+		warning_button->add_theme_color_override("font_color", get_theme_color(SNAME("warning_color"), SNAME("Editor")));
+ 	} else if (p_suggestion_count > 0) {
+		warning_button->set_icon(get_theme_icon(SNAME("CircleShape2D"), SNAME("EditorIcons")));
+		warning_button->add_theme_color_override("font_color", get_theme_color(SNAME("accent_color"), SNAME("Editor")));
+	}
+	if (!p_warning_count && !p_suggestion_count) {
 		_set_show_warnings_panel(false);
 	}
 }

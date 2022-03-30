@@ -242,7 +242,7 @@ public:
 	void set_edit_state(const Variant &p_state);
 
 	void set_error_count(int p_error_count);
-	void set_warning_count(int p_warning_count);
+	void set_warning_count(int p_warning_count, int p_suggestion_count = 0);
 
 	void update_editor_settings();
 	void set_error(const String &p_error);

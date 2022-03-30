@@ -80,12 +80,16 @@ public:
 		INT_ASSIGNED_TO_ENUM, // An integer value was assigned to an enum-typed variable without casting.
 		ENFORCE_STATIC_VARIABLE_TYPES, // Disabled by default, some users would like to enforce static variable typing.
 		ENFORCE_STATIC_METHOD_PARAMETER_TYPES,
+		// SUGGESTIONS
+		CONSTANT_NAME_NOT_UPPERCASE,
+		REDUNDANT_INFERRED_VAR_TYPE,
 		WARNING_MAX,
 	};
 
 	Code code = WARNING_MAX;
 	int start_line = -1, end_line = -1;
 	int leftmost_column = -1, rightmost_column = -1;
+	bool is_suggestion = false;
 	Vector<String> symbols;
 
 	String get_name() const;
