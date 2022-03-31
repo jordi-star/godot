@@ -1711,12 +1711,14 @@ void CodeTextEditor::set_error_count(int p_error_count) {
 }
 
 void CodeTextEditor::set_warning_count(int p_warning_count, int p_suggestion_count) {
-	warning_button->set_text(itos(p_warning_count+p_suggestion_count));
+	warning_button->set_text(itos(p_warning_count + p_suggestion_count));
 	warning_button->set_visible(p_warning_count + p_suggestion_count > 0);
 	if (p_warning_count > 0) {
+		warning_button->set_tooltip(!p_suggestion_count ? TTR("Warnings") : TTR("Warnings") + " & Suggestions");
 		warning_button->set_icon(get_theme_icon(SNAME("NodeWarning"), SNAME("EditorIcons")));
 		warning_button->add_theme_color_override("font_color", get_theme_color(SNAME("warning_color"), SNAME("Editor")));
- 	} else if (p_suggestion_count > 0) {
+	} else if (p_suggestion_count > 0) {
+		warning_button->set_tooltip(TTR("Suggestions"));
 		warning_button->set_icon(get_theme_icon(SNAME("CircleShape2D"), SNAME("EditorIcons")));
 		warning_button->add_theme_color_override("font_color", get_theme_color(SNAME("accent_color"), SNAME("Editor")));
 	}
@@ -1901,7 +1903,6 @@ CodeTextEditor::CodeTextEditor() {
 	warning_button->set_v_size_flags(SIZE_EXPAND | SIZE_SHRINK_CENTER);
 	warning_button->set_default_cursor_shape(CURSOR_POINTING_HAND);
 	warning_button->connect("pressed", callable_mp(this, &CodeTextEditor::_warning_button_pressed));
-	warning_button->set_tooltip(TTR("Warnings"));
 	set_warning_count(0);
 
 	// Line and column

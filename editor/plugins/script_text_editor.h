@@ -157,6 +157,7 @@ protected:
 	void _breakpoint_toggled(int p_row);
 
 	void _validate_script(); // No longer virtual.
+	void add_warning_to_warnings_panel(const ScriptLanguage::Warning &warning);
 	void _update_warnings();
 	void _update_errors();
 	void _update_highlighted_lines();

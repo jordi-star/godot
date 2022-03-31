@@ -531,6 +531,8 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 	// Appearance: Lines
 	_initial_set("text_editor/appearance/lines/code_folding", true);
 	EDITOR_SETTING(Variant::INT, PROPERTY_HINT_ENUM, "text_editor/appearance/lines/word_wrap", 0, "None,Boundary")
+	_initial_set("text_editor/appearance/lines/highlight_warnings", false);
+	_initial_set("text_editor/appearance/lines/highlight_suggestions", true);
 
 	// Appearance: Whitespace
 	_initial_set("text_editor/appearance/whitespace/draw_tabs", true);
