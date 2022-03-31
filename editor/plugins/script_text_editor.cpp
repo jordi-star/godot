@@ -448,6 +448,21 @@ void ScriptTextEditor::_validate_script() {
 	emit_signal(SNAME("edited_script_changed"));
 }
 
+void ScriptTextEditor::add_warning_to_warnings_panel(const ScriptLanguage::Warning &warning) {
+	warnings_panel->push_cell();
+	warnings_panel->push_meta(warning.start_line - 1);
+	warnings_panel->push_color(warning.is_suggestion ? warnings_panel->get_theme_color(SNAME("accent_color"), SNAME("Editor")) : warnings_panel->get_theme_color(SNAME("warning_color"), SNAME("Editor")));
+	warnings_panel->add_text(TTR("Line") + " " + itos(warning.start_line));
+	warnings_panel->add_text(" (" + warning.string_code + "):");
+	warnings_panel->pop(); // Color.
+	warnings_panel->pop(); // Meta goto.
+	warnings_panel->pop(); // Cell.
+
+	warnings_panel->push_cell();
+	warnings_panel->add_text(warning.is_suggestion ? "Suggestion: " + warning.message : warning.message);
+	warnings_panel->pop(); // Cell.
+}
+
 void ScriptTextEditor::_update_warnings() {
 	int warning_nb = warnings.size();
 	int suggestion_nb = 0;
@@ -481,29 +496,29 @@ void ScriptTextEditor::_update_warnings() {
 		warnings_panel->add_newline();
 	}
 
+	List<ScriptLanguage::Warning> suggestions;
+
 	// Add script warnings.
 	warnings_panel->push_table(2);
 	for (const ScriptLanguage::Warning &w : warnings) {
-		warnings_panel->push_cell();
-		warnings_panel->push_meta(w.start_line - 1);
-		warnings_panel->push_color(w.is_suggestion ? warnings_panel->get_theme_color(SNAME("accent_color"), SNAME("Editor")) : warnings_panel->get_theme_color(SNAME("warning_color"), SNAME("Editor")));
-		warnings_panel->add_text(TTR("Line") + " " + itos(w.start_line));
-		warnings_panel->add_text(" (" + w.string_code + "):");
-		warnings_panel->pop(); // Color.
-		warnings_panel->pop(); // Meta goto.
-		warnings_panel->pop(); // Cell.
-
-		warnings_panel->push_cell();
-		warnings_panel->add_text(w.is_suggestion ? "Suggestion: " + w.message : w.message);
-		warnings_panel->pop(); // Cell.
-		if (w.is_suggestion) {
-			suggestion_nb += 1;
-			warning_nb -= 1;
+		if (w.is_suggestion) { // If warning 'w' is a suggestion
+			suggestion_nb += 1; // Increase suggestion count
+			suggestions.push_back(w);
+			continue; // Skip suggestions, we'll add these later so the warnings panel will show warnings before suggestions.
 		}
+		add_warning_to_warnings_panel(w);
 	}
 	warnings_panel->pop(); // Table.
 
-	code_editor->set_warning_count(warning_nb, suggestion_nb);
+	if (suggestion_nb > 0) {
+		warnings_panel->push_table(2);
+		for (const ScriptLanguage::Warning &s : suggestions) {
+			add_warning_to_warnings_panel(s);
+		}
+		warnings_panel->pop(); // Table.
+	}
+
+	code_editor->set_warning_count(warning_nb - suggestion_nb, suggestion_nb);
 }
 
 void ScriptTextEditor::_update_errors() {
@@ -527,11 +542,18 @@ void ScriptTextEditor::_update_errors() {
 	errors_panel->pop(); // Table
 }
 
-
 void ScriptTextEditor::_update_highlighted_lines() {
 	CodeEdit *te = code_editor->get_text_editor();
 	bool highlight_safe = EDITOR_GET("text_editor/appearance/gutters/highlight_type_safe_lines");
+	bool highlight_suggestions = EDITOR_GET("text_editor/appearance/lines/highlight_suggestions");
+	bool highlight_warnings = EDITOR_GET("text_editor/appearance/lines/highlight_warnings");
 	bool last_is_safe = false;
+
+	Color suggestion_line_color = warnings_panel->get_theme_color(SNAME("accent_color"), SNAME("Editor"));
+	suggestion_line_color.a = .1;
+	Color warning_line_color = warnings_panel->get_theme_color(SNAME("warning_color"), SNAME("Editor")).lightened(.25);
+	warning_line_color.a = .1;
+
 	for (int i = 0; i < te->get_line_count(); i++) {
 		if (errors.is_empty() && warnings.is_empty()) {
 			te->set_line_background_color(i, Color(0, 0, 0, 0));
@@ -544,14 +566,33 @@ void ScriptTextEditor::_update_highlighted_lines() {
 					break;
 				}
 			}
-			Color suggestion_line_color = warnings_panel->get_theme_color(SNAME("accent_color"), SNAME("Editor"));
-			suggestion_line_color.a = .1;
-			if (!error_line) {
+
+			if (!error_line && highlight_suggestions + highlight_warnings) { // If there's no error and highlights are enabled
+				bool line_is_highlighted = false;
 				for (const ScriptLanguage::Warning &W : warnings) {
-					bool suggestion_line = (i == W.start_line - 1) && W.is_suggestion;
-					te->set_line_background_color(i, suggestion_line ? suggestion_line_color : Color(0, 0, 0, 0));
-					if (suggestion_line) {
-						break;
+					if (i == W.start_line - 1) { // If warning 'W' is at the current line
+						if (!W.is_suggestion) {
+							if (highlight_warnings) {
+								te->set_line_background_color(i, warning_line_color);
+								line_is_highlighted = true;
+								break;
+							}
+						} else {
+							if (highlight_suggestions) {
+								te->set_line_background_color(i, suggestion_line_color);
+								line_is_highlighted = true;
+								continue;
+							}
+						}
+
+						if (!line_is_highlighted) {
+							te->set_line_background_color(i, Color(0, 0, 0, 0));
+						}
+					} else {
+						if (line_is_highlighted) {
+							break;
+						}
+						te->set_line_background_color(i, Color(0, 0, 0, 0));
 					}
 				}
 			}

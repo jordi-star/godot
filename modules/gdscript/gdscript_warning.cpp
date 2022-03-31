@@ -163,12 +163,33 @@ String GDScriptWarning::get_message() const {
 			CHECK_SYMBOLS(2);
 			return vformat(R"(%s '%s' does not have a static type defined (Enforce Static Method Parameter Types enabled in Project Settings).)", symbols[0], symbols[1]);
 		}
-		case CONSTANT_NAME_NOT_UPPERCASE: {
-			return "Constant names should use MACRO_CASE for readability.";
+		// SUGGESTIONS
+		case SUGGEST_NAMING_CONVENTIONS: {
+			CHECK_SYMBOLS(2);
+			return vformat(R"(%s should use %s for readability.)", symbols[0], symbols[1]);
 		}
 		case REDUNDANT_INFERRED_VAR_TYPE: {
 			CHECK_SYMBOLS(2);
 			return vformat(R"('%s' could be statically typed. This variable is assigned to a %s.)", symbols[0], symbols[1]);
+		}
+		case NO_TRAILING_COMMA: {
+			if (symbols.size() >= 2) {
+				return vformat(R"(Trailing commas make it easier to add values later. Try adding a comma after the last value of '%s', '%s'.)", symbols[0], symbols[1]);
+			} else if (symbols.size() >= 1) {
+				return vformat(R"(Trailing commas make it easier to add values later. Try adding a comma after the last value in this %s.)", symbols[0]);
+			}
+			break;
+		}
+		case UNNECESSARY_PARENTHESES: {
+			CHECK_SYMBOLS(1);
+			return vformat(R"(%s do not require parentheses in GDScript, try removing them to make your code easier to read.)", symbols[0]);
+		}
+		case NON_PLAIN_BOOLEAN_OP: {
+			CHECK_SYMBOLS(2);
+			return vformat(R"(Prefer the plain English version of boolean operators for readability. Try '%s' instead of '%s'.)", symbols[0], symbols[1]);
+		}
+		case MULTIPLE_STATEMENTS_ON_ONE_LINE: {
+			return vformat(R"(Combining multiple statements into one line may make it harder to read at a glance. Try spreading these statements across multiple lines.)");
 		}
 		case WARNING_MAX:
 			break; // Can't happen, but silences warning
@@ -194,7 +215,13 @@ int GDScriptWarning::get_default_value(Code p_code) {
 
 PropertyInfo GDScriptWarning::get_property_info(Code p_code) {
 	// Making this a separate function in case a warning needs different PropertyInfo in the future.
-	return PropertyInfo(Variant::INT, get_settings_path_from_code(p_code), PROPERTY_HINT_ENUM, "Ignore,Warn,Error");
+	switch (p_code) {
+		case SUGGEST_NAMING_CONVENTIONS:
+		case UNNECESSARY_PARENTHESES:
+			return PropertyInfo(Variant::BOOL, get_settings_path_from_code(p_code), PROPERTY_HINT_NONE);
+		default:
+			return PropertyInfo(Variant::INT, get_settings_path_from_code(p_code), PROPERTY_HINT_ENUM, "Ignore,Warn,Error");
+	}
 }
 
 String GDScriptWarning::get_name() const {
@@ -238,10 +265,14 @@ String GDScriptWarning::get_name_from_code(Code p_code) {
 		"SHADOWED_GLOBAL_IDENTIFIER",
 		"INT_ASSIGNED_TO_ENUM",
 		"ENFORCE_STATIC_VARIABLE_TYPES",
-		"ENFORCE_STATIC_METHOD_PARAMETER_TYPES"
-		"CONSTANT_NAME_NOT_UPPERCASE",
+		"ENFORCE_STATIC_METHOD_PARAMETER_TYPES",
+		// SUGGESTIONS
+		"SUGGEST_NAMING_CONVENTIONS",
 		"REDUNDANT_INFERRED_VAR_TYPE",
-		"WARNING_MAX"
+		"NO_TRAILING_COMMA",
+		"UNNECESSARY_PARENTHESES",
+		"NON_PLAIN_BOOLEAN_OP",
+		"MULTIPLE_STATEMENTS_ON_ONE_LINE",
 	};
 
 	static_assert((sizeof(names) / sizeof(*names)) == WARNING_MAX, "Amount of warning types don't match the amount of warning names.");
@@ -254,6 +285,13 @@ String GDScriptWarning::get_settings_path_from_code(Code p_code) {
 		case ENFORCE_STATIC_VARIABLE_TYPES:
 		case ENFORCE_STATIC_METHOD_PARAMETER_TYPES:
 			return "debug/gdscript/type_inferencing/" + get_name_from_code(p_code).to_lower();
+
+		case SUGGEST_NAMING_CONVENTIONS:
+		case NO_TRAILING_COMMA:
+		case UNNECESSARY_PARENTHESES:
+		case NON_PLAIN_BOOLEAN_OP:
+		case MULTIPLE_STATEMENTS_ON_ONE_LINE:
+			return "debug/gdscript/suggestions/" + get_name_from_code(p_code).to_lower();
 
 		default:
 			return "debug/gdscript/warnings/" + get_name_from_code(p_code).to_lower();

@@ -197,6 +197,12 @@ void GDScriptParser::push_warning(const Node *p_source, GDScriptWarning::Code p_
 		return;
 	}
 
+	if (!Engine::get_singleton()->is_editor_hint()) {
+		if (is_suggestion) {
+			return;
+		}
+	}
+
 	if (ignored_warning_codes.has(p_code)) {
 		return;
 	}
@@ -219,7 +225,7 @@ void GDScriptParser::push_warning(const Node *p_source, GDScriptWarning::Code p_
 	warning.rightmost_column = p_source->rightmost_column;
 	warning.is_suggestion = is_suggestion;
 
-	if (warn_level == GDScriptWarning::WarnLevel::ERROR) {
+	if (warn_level == GDScriptWarning::WarnLevel::ERROR && !is_suggestion) {
 		push_error(warning.get_message(), p_source);
 		return;
 	}
@@ -656,6 +662,12 @@ GDScriptParser::ClassNode *GDScriptParser::parse_class() {
 void GDScriptParser::parse_class_name() {
 	if (consume(GDScriptTokenizer::Token::IDENTIFIER, R"(Expected identifier for the global class name after "class_name".)")) {
 		current_class->identifier = parse_identifier();
+#ifdef TOOLS_ENABLED
+		String class_name = (String)current_class->identifier->name;
+		if (class_name != class_name.capitalize() || class_name.contains("_")) {
+			push_warning(current_class->identifier, GDScriptWarning::Code::SUGGEST_NAMING_CONVENTIONS, PackedStringArray({ "Class names", "PascalCase" }), true);
+		}
+#endif
 	}
 
 	// TODO: Move this to annotation
@@ -851,6 +863,13 @@ GDScriptParser::VariableNode *GDScriptParser::parse_variable(bool p_allow_proper
 	VariableNode *variable = alloc_node<VariableNode>();
 	variable->identifier = parse_identifier();
 	variable->export_info.name = variable->identifier->name;
+
+#ifdef TOOLS_ENABLED
+	String variable_name = (String)variable->identifier->name;
+	if (variable_name != variable_name.to_lower()) {
+		push_warning(variable->identifier, GDScriptWarning::Code::SUGGEST_NAMING_CONVENTIONS, PackedStringArray({ "Variable names", "snake_case" }), true);
+	}
+#endif
 
 	if (match(GDScriptTokenizer::Token::COLON)) {
 		if (check(GDScriptTokenizer::Token::NEWLINE)) {
@@ -1070,12 +1089,12 @@ GDScriptParser::ConstantNode *GDScriptParser::parse_constant() {
 
 	ConstantNode *constant = alloc_node<ConstantNode>();
 	constant->identifier = parse_identifier();
-
+#ifdef TOOLS_ENABLED
 	String constant_name = (String)constant->identifier->name;
 	if (constant_name != constant_name.to_upper()) {
-		push_warning(constant->identifier, GDScriptWarning::Code::CONSTANT_NAME_NOT_UPPERCASE, PackedStringArray(), true);
+		push_warning(constant->identifier, GDScriptWarning::Code::SUGGEST_NAMING_CONVENTIONS, PackedStringArray({ "Constant names", "CONSTANT_CASE" }), true);
 	}
-
+#endif
 	if (match(GDScriptTokenizer::Token::COLON)) {
 		if (check((GDScriptTokenizer::Token::EQUAL))) {
 			// Infer type.
@@ -1179,6 +1198,12 @@ GDScriptParser::EnumNode *GDScriptParser::parse_enum() {
 	if (check(GDScriptTokenizer::Token::IDENTIFIER)) {
 		advance();
 		enum_node->identifier = parse_identifier();
+#ifdef TOOLS_ENABLED
+		String enum_name = (String)enum_node->identifier->name;
+		if (enum_name != enum_name.capitalize() || enum_name.contains("_")) {
+			push_warning(enum_node->identifier, GDScriptWarning::Code::SUGGEST_NAMING_CONVENTIONS, PackedStringArray({ "Enum names", "PascalCase" }), true);
+		}
+#endif
 		named = true;
 	}
 
@@ -1191,7 +1216,6 @@ GDScriptParser::EnumNode *GDScriptParser::parse_enum() {
 	List<MethodInfo> gdscript_funcs;
 	GDScriptLanguage::get_singleton()->get_public_functions(&gdscript_funcs);
 #endif
-
 	do {
 		if (check(GDScriptTokenizer::Token::BRACE_CLOSE)) {
 			break; // Allow trailing comma.
@@ -1217,6 +1241,12 @@ GDScriptParser::EnumNode *GDScriptParser::parse_enum() {
 			item.leftmost_column = previous.leftmost_column;
 			item.rightmost_column = previous.rightmost_column;
 
+#ifdef TOOLS_ENABLED
+			String item_name = (String)item.identifier->name;
+			if (item_name != item_name.to_upper()) {
+				push_warning(item.identifier, GDScriptWarning::Code::SUGGEST_NAMING_CONVENTIONS, PackedStringArray({ "Enum values", "CONSTANT_CASE" }), true);
+			}
+#endif
 			if (elements.has(item.identifier->name)) {
 				push_error(vformat(R"(Name "%s" was already in this enum (at line %d).)", item.identifier->name, elements[item.identifier->name]), item.identifier);
 			} else if (!named) {
@@ -1247,6 +1277,16 @@ GDScriptParser::EnumNode *GDScriptParser::parse_enum() {
 				// Add as member of current class.
 				current_class->add_member(item);
 			}
+
+#ifdef TOOLS_ENABLED // Suggestions are only enabled in the Editor.
+			// Check if there's no trailing comma
+			if (!check(GDScriptTokenizer::Token::COMMA) && check(GDScriptTokenizer::Token::BRACE_CLOSE)) {
+				// Check if enum is multiline
+				if (elements[item.identifier->name] != enum_node->start_line) {
+					push_warning(enum_node->values[enum_node->values.size() - 1].identifier, GDScriptWarning::Code::NO_TRAILING_COMMA, PackedStringArray({ enum_node->identifier->name, enum_node->values[enum_node->values.size() - 1].identifier->name }), true);
+				}
+			}
+#endif
 		}
 	} while (match(GDScriptTokenizer::Token::COMMA));
 
@@ -1350,6 +1390,13 @@ GDScriptParser::FunctionNode *GDScriptParser::parse_function() {
 
 	function->identifier = parse_identifier();
 	function->is_static = _static;
+
+#ifdef TOOLS_ENABLED
+	String function_name = (String)function->identifier->name;
+	if (function_name != function_name.to_lower()) {
+		push_warning(function->identifier, GDScriptWarning::Code::SUGGEST_NAMING_CONVENTIONS, PackedStringArray({ "Function names", "snake_case" }), true);
+	}
+#endif
 
 	SuiteNode *body = alloc_node<SuiteNode>();
 	SuiteNode *previous_suite = current_suite;
@@ -1766,11 +1813,27 @@ GDScriptParser::ForNode *GDScriptParser::parse_for() {
 
 GDScriptParser::IfNode *GDScriptParser::parse_if(const String &p_token) {
 	IfNode *n_if = alloc_node<IfNode>();
-
+#ifdef TOOLS_ENABLED
+	bool has_opening_parenthesis = false;
+	int initial_multiline_size = 0;
+	if (check(GDScriptTokenizer::Token::PARENTHESIS_OPEN)) {
+		has_opening_parenthesis = true;
+		initial_multiline_size = multiline_stack.size() + 1;
+	}
+#endif
 	n_if->condition = parse_expression(false);
 	if (n_if->condition == nullptr) {
 		push_error(vformat(R"(Expected conditional expression after "%s".)", p_token));
 	}
+
+#ifdef TOOLS_ENABLED
+	if (has_opening_parenthesis) {
+		if (previous.type == GDScriptTokenizer::Token::PARENTHESIS_CLOSE && n_if->condition->is_group) { // Check for both open and close to allow for parentheses to be used for order of operations, etc
+			String statement_type = p_token != "elif" ? "'If' statements" : "'Else If' statements";
+			push_warning(n_if, GDScriptWarning::Code::UNNECESSARY_PARENTHESES, PackedStringArray({ statement_type }), true);
+		}
+	}
+#endif
 
 	consume(GDScriptTokenizer::Token::COLON, vformat(R"(Expected ":" after "%s" condition.)", p_token));
 
@@ -2060,6 +2123,12 @@ GDScriptParser::IdentifierNode *GDScriptParser::PatternNode::get_bind(const Stri
 
 GDScriptParser::WhileNode *GDScriptParser::parse_while() {
 	WhileNode *n_while = alloc_node<WhileNode>();
+
+#ifdef TOOLS_ENABLED
+	if (check(GDScriptTokenizer::Token::PARENTHESIS_OPEN)) {
+		push_warning(n_while, GDScriptWarning::Code::UNNECESSARY_PARENTHESES, PackedStringArray({ "'While' loops" }), true);
+	}
+#endif
 
 	n_while->condition = parse_expression(false);
 	if (n_while->condition == nullptr) {
@@ -2356,11 +2425,21 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_binary_operator(Expression
 		case GDScriptTokenizer::Token::AMPERSAND_AMPERSAND:
 			operation->operation = BinaryOpNode::OP_LOGIC_AND;
 			operation->variant_op = Variant::OP_AND;
+#ifdef TOOLS_ENABLED
+			if (op.type == GDScriptTokenizer::Token::AMPERSAND_AMPERSAND) {
+				push_warning(operation, GDScriptWarning::Code::NON_PLAIN_BOOLEAN_OP, PackedStringArray({ "and", "&&" }), true);
+			}
+#endif
 			break;
 		case GDScriptTokenizer::Token::OR:
 		case GDScriptTokenizer::Token::PIPE_PIPE:
 			operation->operation = BinaryOpNode::OP_LOGIC_OR;
 			operation->variant_op = Variant::OP_OR;
+#ifdef TOOLS_ENABLED
+			if (op.type == GDScriptTokenizer::Token::PIPE_PIPE) {
+				push_warning(operation, GDScriptWarning::Code::NON_PLAIN_BOOLEAN_OP, PackedStringArray({ "or", "||" }), true);
+			}
+#endif
 			break;
 		case GDScriptTokenizer::Token::IS:
 			operation->operation = BinaryOpNode::OP_TYPE_TEST;
@@ -2576,6 +2655,16 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_array(ExpressionNode *p_pr
 			} else {
 				array->elements.push_back(element);
 			}
+
+#ifdef TOOLS_ENABLED // Suggestions are only enabled in the Editor.
+			// Check if there's no trailing comma
+			if (!check(GDScriptTokenizer::Token::COMMA) && check(GDScriptTokenizer::Token::BRACKET_CLOSE)) {
+				// Check if array is multiline
+				if (element->start_line != array->start_line) {
+					push_warning(element, GDScriptWarning::Code::NO_TRAILING_COMMA, PackedStringArray({ "array" }), true);
+				}
+			}
+#endif
 		} while (match(GDScriptTokenizer::Token::COMMA) && !is_at_end());
 	}
 	pop_multiline();
@@ -2667,6 +2756,15 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_dictionary(ExpressionNode 
 			if (key != nullptr && value != nullptr) {
 				dictionary->elements.push_back({ key, value });
 			}
+#ifdef TOOLS_ENABLED // Suggestions are only enabled in the Editor.
+			// Check if there's no trailing comma
+			if (!check(GDScriptTokenizer::Token::COMMA) && check(GDScriptTokenizer::Token::BRACE_CLOSE)) {
+				// Check if array is multiline
+				if (key->start_line != dictionary->start_line) {
+					push_warning(key, GDScriptWarning::Code::NO_TRAILING_COMMA, PackedStringArray({ "dictionary" }), true);
+				}
+			}
+#endif
 		} while (match(GDScriptTokenizer::Token::COMMA) && !is_at_end());
 	}
 	pop_multiline();
@@ -2683,6 +2781,7 @@ GDScriptParser::ExpressionNode *GDScriptParser::parse_grouping(ExpressionNode *p
 	} else {
 		consume(GDScriptTokenizer::Token::PARENTHESIS_CLOSE, R"*(Expected closing ")" after grouping expression.)*");
 	}
+	grouped->is_group = true;
 	return grouped;
 }
 

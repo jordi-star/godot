@@ -279,6 +279,8 @@ public:
 		int code;
 		String string_code;
 		String message;
+		bool is_suggestion;
+		bool suggestion_dismissed;
 	};
 
 	struct ScriptError {
