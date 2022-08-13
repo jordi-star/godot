@@ -224,7 +224,11 @@ void AnimatedSprite2D::_notification(int p_what) {
 				return;
 			}
 
-			Ref<Texture2D> texture = frames->get_frame(animation, frame);
+			Ref<SpriteAnimationFrame> anim_frame = frames->get_frame(animation, frame);
+			if (anim_frame.is_null()) {
+				return;
+			}
+			Ref<Texture2D> texture = anim_frame->get_texture();
 			if (texture.is_null()) {
 				return;
 			}

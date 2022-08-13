@@ -693,6 +693,7 @@ void register_scene_types() {
 	GDREGISTER_CLASS(GPUParticles2D);
 	GDREGISTER_CLASS(Sprite2D);
 	GDREGISTER_CLASS(SpriteFrames);
+	GDREGISTER_CLASS(SpriteAnimationFrame);
 	GDREGISTER_CLASS(AnimatedSprite2D);
 	GDREGISTER_CLASS(Position2D);
 	GDREGISTER_CLASS(Line2D);

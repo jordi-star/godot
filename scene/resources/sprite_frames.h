@@ -33,13 +33,42 @@
 
 #include "scene/resources/texture.h"
 
+class SpriteAnimationFrame : public RefCounted {
+	GDCLASS(SpriteAnimationFrame, RefCounted);
+
+	Ref<Texture2D> texture;
+	HashMap<StringName, Vector2> anchor_offsets;
+
+	protected:
+		static void _bind_methods();
+	public:
+		static Dictionary anchors_to_dict(const HashMap<StringName, Vector2> &p_anchors);
+		static HashMap<StringName, Vector2> dict_to_anchors(const Dictionary &p_anchors_dict);
+		void set_texture(const Ref<Texture2D> &p_texture);
+		Ref<Texture2D> get_texture() const;
+
+		void set_anchor_offset(const StringName &p_anchor_name, const Vector2 &p_anchor_offset);
+		_FORCE_INLINE_ Vector2 get_anchor_offset(const StringName &p_anchor_name) const {
+			HashMap<StringName, Vector2>::ConstIterator E = anchor_offsets.find(p_anchor_name);
+			ERR_FAIL_COND_V_MSG(!E, Vector2(), "Anchor offset '" + String(p_anchor_name) + "' doesn't exist.");
+			return anchor_offsets[p_anchor_name];
+		}
+		Dictionary get_anchor_offsets() const;
+		void set_anchor_offsets(const Dictionary &p_anchors);
+
+		SpriteAnimationFrame();
+		SpriteAnimationFrame(const Ref<Texture2D> &p_texture, const HashMap<StringName, Vector2> &p_anchors = {});
+};
+
 class SpriteFrames : public Resource {
 	GDCLASS(SpriteFrames, Resource);
+
 
 	struct Anim {
 		double speed = 5.0;
 		bool loop = true;
-		Vector<Ref<Texture2D>> frames;
+		Vector<Ref<SpriteAnimationFrame>> frames;
+		HashMap<StringName, Vector2> anchors;
 	};
 
 	HashMap<StringName, Anim> animations;
@@ -65,14 +94,14 @@ public:
 	void set_animation_loop(const StringName &p_anim, bool p_loop);
 	bool get_animation_loop(const StringName &p_anim) const;
 
-	void add_frame(const StringName &p_anim, const Ref<Texture2D> &p_frame, int p_at_pos = -1);
+	void add_frame(const StringName &p_anim, const Ref<SpriteAnimationFrame> &p_frame, int p_at_pos = -1);
 	int get_frame_count(const StringName &p_anim) const;
-	_FORCE_INLINE_ Ref<Texture2D> get_frame(const StringName &p_anim, int p_idx) const {
+	_FORCE_INLINE_ Ref<SpriteAnimationFrame> get_frame(const StringName &p_anim, int p_idx) const {
 		HashMap<StringName, Anim>::ConstIterator E = animations.find(p_anim);
-		ERR_FAIL_COND_V_MSG(!E, Ref<Texture2D>(), "Animation '" + String(p_anim) + "' doesn't exist.");
-		ERR_FAIL_COND_V(p_idx < 0, Ref<Texture2D>());
+		ERR_FAIL_COND_V_MSG(!E, Ref<SpriteAnimationFrame>(), "Animation '" + String(p_anim) + "' doesn't exist.");
+		ERR_FAIL_COND_V(p_idx < 0, Ref<SpriteAnimationFrame>());
 		if (p_idx >= E->value.frames.size()) {
-			return Ref<Texture2D>();
+			return Ref<SpriteAnimationFrame>();
 		}
 
 		return E->value.frames[p_idx];
@@ -85,7 +114,7 @@ public:
 		if (p_idx >= E->value.frames.size()) {
 			return;
 		}
-		E->value.frames.write[p_idx] = p_frame;
+		E->value.frames.write[p_idx]->set_texture(p_frame);
 	}
 	void remove_frame(const StringName &p_anim, int p_idx);
 	void clear(const StringName &p_anim);

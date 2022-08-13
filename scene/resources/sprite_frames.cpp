@@ -32,7 +32,87 @@
 
 #include "scene/scene_string_names.h"
 
-void SpriteFrames::add_frame(const StringName &p_anim, const Ref<Texture2D> &p_frame, int p_at_pos) {
+void SpriteAnimationFrame::set_texture(const Ref<Texture2D> &p_texture) {
+	texture = p_texture;
+}
+
+Ref<Texture2D> SpriteAnimationFrame::get_texture() const {
+	return texture;
+}
+
+Dictionary SpriteAnimationFrame::anchors_to_dict(const HashMap<StringName, Vector2> &p_anchors) {
+	Dictionary anchors_dict = Dictionary();
+	for (const KeyValue<StringName, Vector2> &E : p_anchors) {
+		anchors_dict[E.key] = E.value;
+	}
+	return anchors_dict;
+}
+
+HashMap<StringName, Vector2> SpriteAnimationFrame::dict_to_anchors(const Dictionary &p_anchors_dict) {
+	HashMap<StringName, Vector2> anchors = {};
+	Array anchor_keys = p_anchors_dict.keys();
+	Array anchor_values = p_anchors_dict.values();
+	for (int i = 0; i < p_anchors_dict.size(); i++) {
+		// Check types and cast for use in HashMap
+		StringName *key;
+		Vector2 *value;
+		if (anchor_keys[i].get_type() == Variant::Type::STRING_NAME) {
+			key = cast_to<StringName>(anchor_keys[i]);
+		}
+		if (anchor_keys[i].get_type() == Variant::Type::VECTOR2) {
+			value = cast_to<Vector2>(anchor_keys[i]);
+		}
+		ERR_CONTINUE_MSG(!key || !value, vformat("An invalid anchor was found at index %s.", i));
+		anchors[*key] = *value;
+	}
+	return anchors;
+}
+
+void SpriteAnimationFrame::set_anchor_offsets(const Dictionary &p_offsets) {
+	HashMap<StringName, Vector2> offset_hashmap = {};
+	Array anchor_keys = p_offsets.keys();
+	Array anchor_values = p_offsets.values();
+	for (int i = 0; i < p_offsets.size(); i++) {
+		// Check types and cast for use in HashMap
+		StringName *key;
+		Vector2 *value;
+		if (anchor_keys[i].get_type() == Variant::Type::STRING_NAME) {
+			key = cast_to<StringName>(anchor_keys[i]);
+		}
+		if (anchor_keys[i].get_type() == Variant::Type::VECTOR2) {
+			value = cast_to<Vector2>(anchor_keys[i]);
+		}
+		ERR_CONTINUE_MSG(!key || !value, vformat("An invalid anchor was found at index %s.", i));
+		offset_hashmap[*key] = *value;
+	}
+	anchor_offsets = offset_hashmap;
+}
+
+Dictionary SpriteAnimationFrame::get_anchor_offsets() const {
+	return anchors_to_dict(anchor_offsets);
+}
+
+void SpriteAnimationFrame::set_anchor_offset(const StringName &p_anchor_name, const Vector2 &p_anchor_offset) {
+	anchor_offsets[p_anchor_name] = p_anchor_offset;
+}
+
+void SpriteAnimationFrame::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("set_texture", "texture"), &SpriteAnimationFrame::set_texture);
+	ClassDB::bind_method(D_METHOD("get_texture"), &SpriteAnimationFrame::get_texture);
+	ClassDB::bind_method(D_METHOD("set_anchor_offsets", "anchor_offsets"), &SpriteAnimationFrame::set_anchor_offsets);
+	ClassDB::bind_method(D_METHOD("get_anchor_offsets"), &SpriteAnimationFrame::get_anchor_offsets);
+
+	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "texture", PROPERTY_HINT_RESOURCE_TYPE, "Texture2D"), "set_texture", "get_texture");
+	ADD_PROPERTY(PropertyInfo(Variant::DICTIONARY, "anchor_offsets"), "set_anchor_offsets", "get_anchor_offsets");
+}
+
+SpriteAnimationFrame::SpriteAnimationFrame() {}
+SpriteAnimationFrame::SpriteAnimationFrame(const Ref<Texture2D> &p_texture, const HashMap<StringName, Vector2> &p_anchor_offsets) {
+	texture = p_texture;
+	anchor_offsets = p_anchor_offsets;
+}
+
+void SpriteFrames::add_frame(const StringName &p_anim, const Ref<SpriteAnimationFrame> &p_frame, int p_at_pos) {
 	HashMap<StringName, Anim>::Iterator E = animations.find(p_anim);
 	ERR_FAIL_COND_MSG(!E, "Animation '" + String(p_anim) + "' doesn't exist.");
 
@@ -154,6 +234,7 @@ Array SpriteFrames::_get_animations() const {
 			frames.push_back(anim.frames[i]);
 		}
 		d["frames"] = frames;
+		d["anchors"] = SpriteAnimationFrame::anchors_to_dict(anim.anchors);
 		anims.push_back(d);
 	}
 
@@ -176,9 +257,17 @@ void SpriteFrames::_set_animations(const Array &p_animations) {
 		Array frames = d["frames"];
 		for (int j = 0; j < frames.size(); j++) {
 			Ref<Resource> res = frames[j];
-			anim.frames.push_back(res);
+			if (Object::cast_to<Texture2D>(*res)) { 
+				// Allow backwards-compat with tscn files that don't use SpriteAnimationFrame
+				anim.frames.push_back(memnew(SpriteAnimationFrame(res)));
+			}
+			else {
+				anim.frames.push_back(Object::cast_to<SpriteAnimationFrame>(*res));
+			}
 		}
-
+		if (d.has("anchors")) {
+			anim.anchors = SpriteAnimationFrame::dict_to_anchors(d["anchors"]);
+		}
 		animations[d["name"]] = anim;
 	}
 }

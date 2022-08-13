@@ -823,7 +823,12 @@ void AnimatedSprite3D::_draw() {
 		return;
 	}
 
-	Ref<Texture2D> texture = frames->get_frame(animation, frame);
+	Ref<SpriteAnimationFrame> anim_frame = frames->get_frame(animation, frame);
+	if (anim_frame.is_null()) {
+		set_base(RID());
+		return;
+	}
+	Ref<Texture2D> texture = frames->get_frame(animation, frame)->get_texture();
 	if (!texture.is_valid()) {
 		set_base(RID());
 		return; //no texuture no life

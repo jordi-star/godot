@@ -257,7 +257,7 @@ void SpriteFramesEditor::_sheet_add_frames() {
 		at->set_atlas(split_sheet_preview->get_texture());
 		at->set_region(Rect2(offset + frame_coords * (frame_size + separation), frame_size));
 
-		undo_redo->add_do_method(frames, "add_frame", edited_anim, at, -1);
+		undo_redo->add_do_method(frames, "add_frame", edited_anim, memnew(SpriteAnimationFrame(at)), -1);
 		undo_redo->add_undo_method(frames, "remove_frame", edited_anim, fc);
 	}
 
@@ -468,7 +468,7 @@ void SpriteFramesEditor::_file_load_request(const Vector<String> &p_path, int p_
 	int count = 0;
 
 	for (const Ref<Texture2D> &E : resources) {
-		undo_redo->add_do_method(frames, "add_frame", edited_anim, E, p_at_pos == -1 ? -1 : p_at_pos + count);
+		undo_redo->add_do_method(frames, "add_frame", edited_anim, memnew(SpriteAnimationFrame(E)), p_at_pos == -1 ? -1 : p_at_pos + count);
 		undo_redo->add_undo_method(frames, "remove_frame", edited_anim, p_at_pos == -1 ? fc : p_at_pos);
 		count++;
 	}
@@ -523,7 +523,7 @@ void SpriteFramesEditor::_paste_pressed() {
 	}
 
 	undo_redo->create_action(TTR("Paste Frame"));
-	undo_redo->add_do_method(frames, "add_frame", edited_anim, r);
+	undo_redo->add_do_method(frames, "add_frame", edited_anim, memnew(SpriteAnimationFrame(r)));
 	undo_redo->add_undo_method(frames, "remove_frame", edited_anim, frames->get_frame_count(edited_anim));
 	undo_redo->add_do_method(this, "_update_library");
 	undo_redo->add_undo_method(this, "_update_library");
@@ -536,7 +536,7 @@ void SpriteFramesEditor::_copy_pressed() {
 	if (tree->get_current() < 0) {
 		return;
 	}
-	Ref<Texture2D> r = frames->get_frame(edited_anim, tree->get_current());
+	Ref<SpriteAnimationFrame> r = frames->get_frame(edited_anim, tree->get_current());
 	if (!r.is_valid()) {
 		return;
 	}
@@ -557,10 +557,8 @@ void SpriteFramesEditor::_empty_pressed() {
 		from = frames->get_frame_count(edited_anim);
 	}
 
-	Ref<Texture2D> r;
-
 	undo_redo->create_action(TTR("Add Empty"));
-	undo_redo->add_do_method(frames, "add_frame", edited_anim, r, from);
+	undo_redo->add_do_method(frames, "add_frame", edited_anim, memnew(SpriteAnimationFrame()), from);
 	undo_redo->add_undo_method(frames, "remove_frame", edited_anim, from);
 	undo_redo->add_do_method(this, "_update_library");
 	undo_redo->add_undo_method(this, "_update_library");
@@ -579,11 +577,8 @@ void SpriteFramesEditor::_empty2_pressed() {
 	} else {
 		from = frames->get_frame_count(edited_anim);
 	}
-
-	Ref<Texture2D> r;
-
 	undo_redo->create_action(TTR("Add Empty"));
-	undo_redo->add_do_method(frames, "add_frame", edited_anim, r, from + 1);
+	undo_redo->add_do_method(frames, "add_frame", edited_anim, memnew(SpriteAnimationFrame()), from + 1);
 	undo_redo->add_undo_method(frames, "remove_frame", edited_anim, from + 1);
 	undo_redo->add_do_method(this, "_update_library");
 	undo_redo->add_undo_method(this, "_update_library");
@@ -806,8 +801,7 @@ void SpriteFramesEditor::_animation_remove_confirmed() {
 	undo_redo->add_undo_method(frames, "set_animation_loop", edited_anim, frames->get_animation_loop(edited_anim));
 	int fc = frames->get_frame_count(edited_anim);
 	for (int i = 0; i < fc; i++) {
-		Ref<Texture2D> frame = frames->get_frame(edited_anim, i);
-		undo_redo->add_undo_method(frames, "add_frame", edited_anim, frame);
+		undo_redo->add_undo_method(frames, "add_frame", edited_anim, frames->get_frame(edited_anim, i));
 	}
 	undo_redo->add_do_method(this, "_update_library");
 	undo_redo->add_undo_method(this, "_update_library");
@@ -946,23 +940,28 @@ void SpriteFramesEditor::_update_library(bool p_skip_selector) {
 
 	for (int i = 0; i < frames->get_frame_count(edited_anim); i++) {
 		String name;
-		Ref<Texture2D> frame = frames->get_frame(edited_anim, i);
-
+		Ref<SpriteAnimationFrame> frame = frames->get_frame(edited_anim, i);
 		if (frame.is_null()) {
-			name = itos(i) + ": " + TTR("(empty)");
-		} else {
-			name = itos(i) + ": " + frame->get_name();
+			name = itos(i) + ": " + TTR("(invalid)");
+			tree->add_item(name, nullptr);
+			continue;
 		}
 
-		tree->add_item(name, frame);
-		if (frame.is_valid()) {
-			String tooltip = frame->get_path();
+		if (frame->get_texture().is_null()) {
+			name = itos(i) + ": " + TTR("(empty)");
+		} else {
+			name = itos(i) + ": " + frame->get_texture()->get_name();
+		}
+
+		tree->add_item(name, frame->get_texture());
+		if (frame->get_texture().is_valid()) {
+			String tooltip = frame->get_texture()->get_path();
 
 			// Frame is often saved as an AtlasTexture subresource within a scene/resource file,
 			// thus its path might be not what the user is looking for. So we're also showing
 			// subsequent source texture paths.
 			String prefix = String::utf8("┖╴");
-			Ref<AtlasTexture> at = frame;
+			Ref<AtlasTexture> at = frame->get_texture();
 			while (at.is_valid() && at->get_atlas().is_valid()) {
 				tooltip += "\n" + prefix + at->get_atlas()->get_path();
 				prefix = "    " + prefix;
@@ -1088,12 +1087,15 @@ void SpriteFramesEditor::drop_data_fw(const Point2 &p_point, const Variant &p_da
 
 	int at_pos = tree->get_item_at_position(p_point, true);
 
+	// @TODO: Drag anchors along with texture
+	print_line(d);
+
 	if (String(d["type"]) == "resource" && d.has("resource")) {
 		Ref<Resource> r = d["resource"];
 
-		Ref<Texture2D> texture = r;
+		Ref<SpriteAnimationFrame> anim_frame = r;
 
-		if (texture.is_valid()) {
+		if (anim_frame.is_valid()) {
 			bool reorder = false;
 			if (d.has("from") && (Object *)(d["from"]) == tree) {
 				reorder = true;
@@ -1107,15 +1109,15 @@ void SpriteFramesEditor::drop_data_fw(const Point2 &p_point, const Variant &p_da
 
 				undo_redo->create_action(TTR("Move Frame"));
 				undo_redo->add_do_method(frames, "remove_frame", edited_anim, from_frame == -1 ? frames->get_frame_count(edited_anim) : from_frame);
-				undo_redo->add_do_method(frames, "add_frame", edited_anim, texture, at_pos == -1 ? -1 : at_pos);
+				undo_redo->add_do_method(frames, "add_frame", edited_anim, anim_frame, at_pos == -1 ? -1 : at_pos);
 				undo_redo->add_undo_method(frames, "remove_frame", edited_anim, at_pos == -1 ? frames->get_frame_count(edited_anim) - 1 : at_pos);
-				undo_redo->add_undo_method(frames, "add_frame", edited_anim, texture, from_frame);
+				undo_redo->add_undo_method(frames, "add_frame", edited_anim, anim_frame, from_frame);
 				undo_redo->add_do_method(this, "_update_library");
 				undo_redo->add_undo_method(this, "_update_library");
 				undo_redo->commit_action();
 			} else {
 				undo_redo->create_action(TTR("Add Frame"));
-				undo_redo->add_do_method(frames, "add_frame", edited_anim, texture, at_pos == -1 ? -1 : at_pos);
+				undo_redo->add_do_method(frames, "add_frame", edited_anim, anim_frame, at_pos == -1 ? -1 : at_pos);
 				undo_redo->add_undo_method(frames, "remove_frame", edited_anim, at_pos == -1 ? frames->get_frame_count(edited_anim) : at_pos);
 				undo_redo->add_do_method(this, "_update_library");
 				undo_redo->add_undo_method(this, "_update_library");
