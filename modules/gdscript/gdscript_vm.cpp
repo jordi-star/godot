@@ -1149,8 +1149,8 @@ Variant GDScriptFunction::call(GDScriptInstance *p_instance, const Variant **p_a
 
 				Variant::Type var_type = (Variant::Type)_code_ptr[ip + 3];
 				GD_ERR_BREAK(var_type < 0 || var_type >= Variant::VARIANT_MAX);
-
-				if (src->get_type() != var_type) {
+				print_line(vformat("BUILTIN TYPE %s", dst->is_nullable()));
+				if (src->get_type() != var_type && (!src->is_nullable() || !dst->is_null())) {
 #ifdef DEBUG_ENABLED
 					if (Variant::can_convert_strict(src->get_type(), var_type)) {
 #endif // DEBUG_ENABLED

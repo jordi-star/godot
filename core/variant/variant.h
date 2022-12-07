@@ -165,6 +165,7 @@ private:
 	// it only allocates extra memory for aabb/matrix.
 
 	Type type = NIL;
+	bool nullable = false;
 
 	struct ObjData {
 		ObjectID id;
@@ -333,6 +334,8 @@ public:
 	static bool can_convert(Type p_type_from, Type p_type_to);
 	static bool can_convert_strict(Type p_type_from, Type p_type_to);
 	static bool is_type_shared(Variant::Type p_type);
+	bool is_nullable() const;
+	void set_nullable(); // Nullable is irriversible. TODO: Should this be changed?
 
 	bool is_ref_counted() const;
 	_FORCE_INLINE_ bool is_num() const {

@@ -119,6 +119,8 @@ public:
 		};
 		TypeSource type_source = UNDETECTED;
 
+
+		bool nullable = false; // Used for nullable static types.
 		bool is_constant = false;
 		bool is_meta_type = false;
 		bool is_coroutine = false; // For function calls.
@@ -213,6 +215,7 @@ public:
 			class_type = p_other.class_type;
 			method_info = p_other.method_info;
 			enum_values = p_other.enum_values;
+			nullable = p_other.nullable;
 			unset_container_element_type();
 			if (p_other.has_container_element_type()) {
 				set_container_element_type(p_other.get_container_element_type());
@@ -1093,6 +1096,7 @@ public:
 	struct TypeNode : public Node {
 		Vector<IdentifierNode *> type_chain;
 		TypeNode *container_type = nullptr;
+		bool nullable = false; // Used for nullable static types
 
 		TypeNode() {
 			type = TYPE;

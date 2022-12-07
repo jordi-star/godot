@@ -3568,6 +3568,14 @@ bool Variant::is_shared() const {
 	return is_type_shared(type);
 }
 
+bool Variant::is_nullable() const {
+	return nullable;
+}
+
+void Variant::set_nullable() {
+	nullable = true;
+}
+
 void Variant::_variant_call_error(const String &p_method, Callable::CallError &error) {
 	switch (error.error) {
 		case Callable::CallError::CALL_ERROR_INVALID_ARGUMENT: {

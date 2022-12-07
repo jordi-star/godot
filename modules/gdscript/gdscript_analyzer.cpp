@@ -422,14 +422,17 @@ Error GDScriptAnalyzer::resolve_inheritance(GDScriptParser::ClassNode *p_class, 
 
 GDScriptParser::DataType GDScriptAnalyzer::resolve_datatype(GDScriptParser::TypeNode *p_type) {
 	GDScriptParser::DataType result;
-
+	print_line("RESOLVE ANALYZER DT");
 	if (p_type == nullptr) {
 		result.kind = GDScriptParser::DataType::VARIANT;
 		return result;
 	}
+	print_line(vformat("RESOLVE DT %s", p_type->nullable));
 
 	result.type_source = result.ANNOTATED_EXPLICIT;
 	result.builtin_type = Variant::OBJECT;
+	result.nullable = p_type->nullable;
+	print_line(vformat("N%s", result.nullable));
 
 	if (p_type->type_chain.is_empty()) {
 		// void.
@@ -613,8 +616,10 @@ GDScriptParser::DataType GDScriptAnalyzer::resolve_datatype(GDScriptParser::Type
 	if (result.builtin_type != Variant::ARRAY && p_type->container_type != nullptr) {
 		push_error("Only arrays can specify the collection element type.", p_type);
 	}
-
+	print_line("SET");
+	print_line(vformat("N%s", result.nullable));
 	p_type->set_datatype(result);
+	print_line(vformat("NE%s", result.nullable));
 	return result;
 }
 
@@ -640,6 +645,7 @@ void GDScriptAnalyzer::resolve_class_interface(GDScriptParser::ClassNode *p_clas
 
 				GDScriptParser::DataType specified_type;
 				if (member.variable->datatype_specifier != nullptr) {
+					print_line("SPECIFIC");
 					specified_type = resolve_datatype(member.variable->datatype_specifier);
 					specified_type.is_meta_type = false;
 				}
@@ -656,6 +662,7 @@ void GDScriptAnalyzer::resolve_class_interface(GDScriptParser::ClassNode *p_clas
 						}
 					}
 					datatype = member.variable->initializer->get_datatype();
+					datatype.nullable = specified_type.nullable;
 					if (datatype.type_source != GDScriptParser::DataType::UNDETECTED) {
 						datatype.type_source = GDScriptParser::DataType::INFERRED;
 					}
@@ -1462,9 +1469,13 @@ void GDScriptAnalyzer::resolve_variable(GDScriptParser::VariableNode *p_variable
 	GDScriptParser::DataType type;
 	type.kind = GDScriptParser::DataType::VARIANT; // By default.
 
+
 	GDScriptParser::DataType specified_type;
 	if (p_variable->datatype_specifier != nullptr) {
+		print_line(vformat("%s ER %s", p_variable->identifier->name, p_variable->datatype_specifier->nullable));
 		specified_type = resolve_datatype(p_variable->datatype_specifier);
+		print_line(vformat("%s d %s", p_variable->identifier->name, p_variable->datatype_specifier->nullable));
+		print_line(vformat("%s RE %s",  p_variable->identifier->name, specified_type.nullable));
 		specified_type.is_meta_type = false;
 	}
 
@@ -1822,7 +1833,7 @@ void GDScriptAnalyzer::reduce_expression(GDScriptParser::ExpressionNode *p_expre
 	}
 
 	p_expression->reduced = true;
-
+	print_line(vformat("REDUCING EXP OF TYPE %s", p_expression->type));
 	switch (p_expression->type) {
 		case GDScriptParser::Node::ARRAY:
 			reduce_array(static_cast<GDScriptParser::ArrayNode *>(p_expression));
@@ -3237,6 +3248,10 @@ void GDScriptAnalyzer::reduce_lambda(GDScriptParser::LambdaNode *p_lambda) {
 
 void GDScriptAnalyzer::reduce_literal(GDScriptParser::LiteralNode *p_literal) {
 	p_literal->reduced_value = p_literal->value;
+	if (p_literal->datatype.nullable) {
+		print_line("EN");
+		p_literal->reduced_value.set_nullable();
+	}
 	p_literal->is_constant = true;
 
 	p_literal->set_datatype(type_from_variant(p_literal->reduced_value, p_literal));
@@ -3713,6 +3728,7 @@ GDScriptParser::DataType GDScriptAnalyzer::type_from_variant(const Variant &p_va
 	result.kind = GDScriptParser::DataType::BUILTIN;
 	result.builtin_type = p_value.get_type();
 	result.type_source = GDScriptParser::DataType::ANNOTATED_EXPLICIT; // Constant has explicit type.
+	result.nullable = p_source->datatype.nullable;
 
 	if (p_value.get_type() == Variant::OBJECT) {
 		Object *obj = p_value;

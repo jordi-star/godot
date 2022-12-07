@@ -3227,6 +3227,11 @@ GDScriptParser::TypeNode *GDScriptParser::parse_type(bool p_allow_void) {
 		}
 	}
 
+	if (match(GDScriptTokenizer::Token::QUESTION_MARK)) {
+		type->nullable = true;
+		print_line(vformat("%s is NULLABLE!! V %s", type_element->name, sizeof(Variant)));
+	}
+
 	complete_extents(type);
 	return type;
 }

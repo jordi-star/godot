@@ -81,12 +81,18 @@ void GDScriptCompiler::_set_error(const String &p_error, const GDScriptParser::N
 }
 
 GDScriptDataType GDScriptCompiler::_gdtype_from_datatype(const GDScriptParser::DataType &p_datatype, GDScript *p_owner) {
+	print_line(vformat("... %s", p_datatype.to_string()));
+	print_line(vformat("S %s", p_datatype.is_set()));
+	print_line(vformat("H %s", p_datatype.is_hard_type()));
+	print_line(vformat("SOURCE %s", p_datatype.type_source));
 	if (!p_datatype.is_set() || !p_datatype.is_hard_type()) {
+		print_line("EMPTY");
 		return GDScriptDataType();
 	}
 
 	GDScriptDataType result;
 	result.has_type = true;
+	result.nullable = p_datatype.nullable;
 
 	switch (p_datatype.kind) {
 		case GDScriptParser::DataType::VARIANT: {
@@ -162,7 +168,6 @@ GDScriptDataType GDScriptCompiler::_gdtype_from_datatype(const GDScriptParser::D
 	if (p_datatype.has_container_element_type()) {
 		result.set_container_element_type(_gdtype_from_datatype(p_datatype.get_container_element_type(), p_owner));
 	}
-
 	return result;
 }
 
@@ -214,7 +219,7 @@ GDScriptCodeGenerator::Address GDScriptCompiler::_parse_expression(CodeGen &code
 	}
 
 	GDScriptCodeGenerator *gen = codegen.generator;
-
+	print_line(vformat("EE %s", p_expression->type));
 	switch (p_expression->type) {
 		case GDScriptParser::Node::IDENTIFIER: {
 			// Look for identifiers in current scope.
@@ -393,7 +398,7 @@ GDScriptCodeGenerator::Address GDScriptCompiler::_parse_expression(CodeGen &code
 		case GDScriptParser::Node::LITERAL: {
 			// Return constant.
 			const GDScriptParser::LiteralNode *cn = static_cast<const GDScriptParser::LiteralNode *>(p_expression);
-
+			print_line("CONST");
 			return codegen.add_constant(cn->value);
 		} break;
 		case GDScriptParser::Node::SELF: {
@@ -882,7 +887,9 @@ GDScriptCodeGenerator::Address GDScriptCompiler::_parse_expression(CodeGen &code
 		case GDScriptParser::Node::ASSIGNMENT: {
 			const GDScriptParser::AssignmentNode *assignment = static_cast<const GDScriptParser::AssignmentNode *>(p_expression);
 
+			print_line("ASS");
 			if (assignment->assignee->type == GDScriptParser::Node::SUBSCRIPT) {
+				print_line("1");
 				// SET (chained) MODE!
 				const GDScriptParser::SubscriptNode *subscript = static_cast<GDScriptParser::SubscriptNode *>(assignment->assignee);
 #ifdef DEBUG_ENABLED
@@ -1095,6 +1102,7 @@ GDScriptCodeGenerator::Address GDScriptCompiler::_parse_expression(CodeGen &code
 				}
 			} else if (assignment->assignee->type == GDScriptParser::Node::IDENTIFIER && _is_class_member_property(codegen, static_cast<GDScriptParser::IdentifierNode *>(assignment->assignee)->name)) {
 				// Assignment to member property.
+				print_line("2");
 				GDScriptCodeGenerator::Address assigned_value = _parse_expression(codegen, r_error, assignment->assigned_value);
 				if (r_error) {
 					return GDScriptCodeGenerator::Address();
@@ -1131,6 +1139,7 @@ GDScriptCodeGenerator::Address GDScriptCompiler::_parse_expression(CodeGen &code
 				bool is_in_setter = false;
 				StringName setter_function;
 				StringName var_name = static_cast<const GDScriptParser::IdentifierNode *>(assignment->assignee)->name;
+				print_line(vformat("VARN %s", var_name));
 				if (!codegen.locals.has(var_name) && codegen.script->member_indices.has(var_name)) {
 					is_member = true;
 					setter_function = codegen.script->member_indices[var_name].setter;
@@ -1873,10 +1882,14 @@ Error GDScriptCompiler::_parse_block(CodeGen &codegen, const GDScriptParser::Sui
 				const GDScriptParser::VariableNode *lv = static_cast<const GDScriptParser::VariableNode *>(s);
 				// Should be already in stack when the block began.
 				GDScriptCodeGenerator::Address local = codegen.locals[lv->identifier->name];
+				print_line(vformat("E%s", lv->datatype_specifier->nullable));
+				print_line(vformat("W%s", lv->get_datatype().nullable));
 				GDScriptDataType local_type = _gdtype_from_datatype(lv->get_datatype(), codegen.script);
+				print_line(vformat("VAR %s", local_type.nullable));
 
 				bool initialized = false;
 				if (lv->initializer != nullptr) {
+					print_line("INITIAIAII!!");
 					// For typed arrays we need to make sure this is already initialized correctly so typed assignment work.
 					if (local_type.has_type && local_type.builtin_type == Variant::ARRAY) {
 						if (local_type.has_container_element_type()) {
@@ -1886,6 +1899,7 @@ Error GDScriptCompiler::_parse_block(CodeGen &codegen, const GDScriptParser::Sui
 						}
 					}
 					GDScriptCodeGenerator::Address src_address = _parse_expression(codegen, err, lv->initializer);
+					print_line(vformat("P %s %s", lv->initializer->reduced_value, local_type.nullable));
 					if (err) {
 						return err;
 					}
@@ -1897,6 +1911,10 @@ Error GDScriptCompiler::_parse_block(CodeGen &codegen, const GDScriptParser::Sui
 					if (src_address.mode == GDScriptCodeGenerator::Address::TEMPORARY) {
 						codegen.generator->pop_temporary();
 					}
+					initialized = true;
+				} else if (local_type.nullable) {
+					print_line("NU");
+					codegen.generator->write_construct(local, Variant::NIL, Vector<GDScriptCodeGenerator::Address>());
 					initialized = true;
 				} else if (local_type.has_type) {
 					// Initialize with default for type.

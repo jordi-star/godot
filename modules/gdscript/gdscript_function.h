@@ -58,6 +58,7 @@ public:
 
 	Kind kind = UNINITIALIZED;
 
+	bool nullable = false;
 	bool has_type = false;
 	Variant::Type builtin_type = Variant::NIL;
 	StringName native_type;
@@ -199,6 +200,7 @@ public:
 		native_type = p_other.native_type;
 		script_type = p_other.script_type;
 		script_type_ref = p_other.script_type_ref;
+		nullable = p_other.nullable;
 		unset_container_element_type();
 		if (p_other.has_container_element_type()) {
 			set_container_element_type(p_other.get_container_element_type());
